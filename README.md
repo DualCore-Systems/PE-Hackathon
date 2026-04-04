@@ -1,192 +1,224 @@
-# MLH PE Hackathon — Flask + Peewee + PostgreSQL Template
+# MLH PE Hackathon — Flask + Peewee + PostgreSQL + Redis
 
-A minimal hackathon starter template. You get the scaffolding and database wiring — you build the models, routes, and CSV loading logic.
+A scalability-focused hackathon starter. The stack runs locally as a single Flask process for development and scales to a 3-replica Nginx-load-balanced cluster with Redis caching via Docker Compose.
 
-**Stack:** Flask · Peewee ORM · PostgreSQL · uv
+**Stack:** Python 3.13 · Flask 3.1 · Peewee ORM · PostgreSQL 16 · Redis 7 · Nginx · Gunicorn · uv
 
-## **Important**
+---
 
-You need to work with around the seed files that you can find in [MLH PE Hackathon](https://mlh-pe-hackathon.com) platform. This will help you build the schema for the database and have some data to do some testing and submit your project for judging. If you need help with this, reach out on Discord or on the Q&A tab on the platform.
+## Quick Start (local development)
 
-## Prerequisites
+### Prerequisites
 
-- **uv** — a fast Python package manager that handles Python versions, virtual environments, and dependencies automatically.
-  Install it with:
-  ```bash
-  # macOS / Linux
-  curl -LsSf https://astral.sh/uv/install.sh | sh
+| Tool | Install |
+|---|---|
+| **uv** | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
+| **PostgreSQL 16** | `brew install postgresql@16` or Docker (see below) |
+| **Python 3.13** | managed automatically by uv |
 
-  # Windows (PowerShell)
-  powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-  ```
-  For other methods see the [uv installation docs](https://docs.astral.sh/uv/getting-started/installation/).
-- PostgreSQL running locally (you can use Docker or a local instance)
-
-## uv Basics
-
-`uv` manages your Python version, virtual environment, and dependencies automatically — no manual `python -m venv` needed.
-
-| Command | What it does |
-|---------|--------------|
-| `uv sync` | Install all dependencies (creates `.venv` automatically) |
-| `uv run <script>` | Run a script using the project's virtual environment |
-| `uv add <package>` | Add a new dependency |
-| `uv remove <package>` | Remove a dependency |
-
-## Quick Start
+### 1 — Clone and install
 
 ```bash
-# 1. Clone the repo
-git clone <repo-url> && cd mlh-pe-hackathon
-
-# 2. Install dependencies
-uv sync
-
-# 3. Create the database
-createdb hackathon_db
-
-# 4. Configure environment
-cp .env.example .env   # edit if your DB credentials differ
-
-# 5. Run the server
-uv run run.py
-
-# 6. Verify
-curl http://localhost:5000/health
-# → {"status":"ok"}
+git clone <repo-url>
+cd PE-Hackathon
+uv sync                  # creates .venv, installs all deps
 ```
+
+### 2 — Start PostgreSQL
+
+**Option A — Docker (recommended, no local Postgres needed):**
+```bash
+docker run -d \
+  --name hackathon-pg \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=hackathon_db \
+  -p 5432:5432 \
+  postgres:16-alpine
+```
+
+**Option B — local Postgres:**
+```bash
+createdb hackathon_db
+```
+
+### 3 — Configure environment
+
+```bash
+cp .env.example .env
+# .env is pre-configured for the defaults above — edit only if your credentials differ
+```
+
+### 4 — Create tables and seed data
+
+```bash
+uv run python seed.py
+# → Tables created.
+# → Seeded 100 products.
+```
+
+### 5 — Run the server
+
+```bash
+uv run run.py
+```
+
+### 6 — Verify
+
+```bash
+curl http://127.0.0.1:5000/health
+# → {"status":"ok"}
+
+curl http://127.0.0.1:5000/products | python3 -m json.tool | head -20
+```
+
+> **macOS note:** Port 5000 is claimed by AirPlay on IPv6. Always use `127.0.0.1:5000`, not `localhost:5000`.
+
+---
+
+## Quick Start (full Docker Compose stack)
+
+Runs Nginx + 3 Flask replicas + PostgreSQL + Redis — no local Python needed.
+
+```bash
+# Build images and start all services
+docker compose up --build -d
+
+# Wait ~15 seconds for seeding, then verify
+curl http://127.0.0.1:80/health
+# → {"status":"ok"}
+
+curl http://127.0.0.1:80/cache/stats
+# → {"hit_rate":"N/A","hits":0,"misses":1,"total_requests":1}
+```
+
+To stop:
+```bash
+docker compose down          # keeps database volume
+docker compose down -v       # also deletes database volume
+```
+
+---
 
 ## Project Structure
 
 ```
-mlh-pe-hackathon/
+PE-Hackathon/
 ├── app/
-│   ├── __init__.py          # App factory (create_app)
-│   ├── database.py          # DatabaseProxy, BaseModel, connection hooks
+│   ├── __init__.py          # App factory: create_app()
+│   ├── cache.py             # Redis cache wrapper (get/set/delete/stats)
+│   ├── database.py          # Peewee DatabaseProxy + connection lifecycle hooks
 │   ├── models/
-│   │   └── __init__.py      # Import your models here
+│   │   ├── __init__.py      # Import all models here
+│   │   └── product.py       # Product model
 │   └── routes/
-│       └── __init__.py      # register_routes() — add blueprints here
-├── .env.example             # DB connection template
-├── .gitignore               # Python + uv gitignore
-├── .python-version          # Pin Python version for uv
-├── pyproject.toml           # Project metadata + dependencies
-├── run.py                   # Entry point: uv run run.py
-└── README.md
+│       ├── __init__.py      # register_routes() — add blueprints here
+│       ├── products.py      # GET/POST /products, GET /products/<id>
+│       └── cache_stats.py   # GET /cache/stats
+├── docs/
+│   ├── architecture.md      # System diagrams (Mermaid)
+│   ├── api.md               # Full API reference
+│   ├── configuration.md     # All environment variables
+│   ├── deploy_guide.md      # Docker Compose deployment + scaling
+│   ├── troubleshooting.md   # Common issues and fixes
+│   ├── runbooks.md          # Operational playbooks
+│   ├── decision_log.md      # Why we chose each technology
+│   ├── capacity_plan.md     # Load test results + scaling projections
+│   └── bottleneck_report.md # Bronze → Silver → Gold optimization story
+├── loadtest/
+│   ├── bronze_test.js       # k6: 50 VUs × 30s
+│   ├── silver_test.js       # k6: 200 VUs × 60s
+│   ├── gold_test.js         # k6: 500 VUs × 120s
+│   └── results/
+│       ├── bronze_results.txt
+│       ├── silver_results.txt
+│       ├── gold_results.txt
+│       └── docker_ps.txt
+├── .env.example             # Environment variable template
+├── .python-version          # Python 3.13 (used by uv)
+├── docker-compose.yml       # Full stack: Nginx + 3× app + Postgres + Redis
+├── docker-entrypoint.sh     # Container startup: wait → seed → gunicorn
+├── Dockerfile               # App image build
+├── nginx.conf               # Round-robin upstream config
+├── pyproject.toml           # Dependencies (uv)
+├── run.py                   # Local dev entry point: uv run run.py
+└── seed.py                  # Idempotent: creates tables + inserts 100 products
 ```
 
-## How to Add a Model
+---
 
-1. Create a file in `app/models/`, e.g. `app/models/product.py`:
+## Adding a Model
+
+1. Create `app/models/your_model.py`:
 
 ```python
 from peewee import CharField, DecimalField, IntegerField
-
 from app.database import BaseModel
 
-
-class Product(BaseModel):
+class YourModel(BaseModel):
     name = CharField()
-    category = CharField()
-    price = DecimalField(decimal_places=2)
-    stock = IntegerField()
+    value = DecimalField(decimal_places=2)
 ```
 
 2. Import it in `app/models/__init__.py`:
 
 ```python
-from app.models.product import Product
+from app.models.your_model import YourModel
 ```
 
-3. Create the table (run once in a Python shell or a setup script):
+3. Create the table (run once, e.g., in `seed.py`):
 
 ```python
 from app.database import db
-from app.models.product import Product
-
-db.create_tables([Product])
+db.create_tables([YourModel], safe=True)
 ```
 
-## How to Add Routes
+## Adding Routes
 
-1. Create a blueprint in `app/routes/`, e.g. `app/routes/products.py`:
-
-```python
-from flask import Blueprint, jsonify
-from playhouse.shortcuts import model_to_dict
-
-from app.models.product import Product
-
-products_bp = Blueprint("products", __name__)
-
-
-@products_bp.route("/products")
-def list_products():
-    products = Product.select()
-    return jsonify([model_to_dict(p) for p in products])
-```
-
+1. Create `app/routes/your_bp.py` with a Flask Blueprint.
 2. Register it in `app/routes/__init__.py`:
 
 ```python
 def register_routes(app):
-    from app.routes.products import products_bp
-    app.register_blueprint(products_bp)
+    from app.routes.your_bp import your_bp
+    app.register_blueprint(your_bp)
 ```
 
-## How to Load CSV Data
+## Running Load Tests
 
-```python
-import csv
-from peewee import chunked
-from app.database import db
-from app.models.product import Product
+```bash
+# Install k6 (macOS)
+brew install k6
 
-def load_csv(filepath):
-    with open(filepath, newline="") as f:
-        reader = csv.DictReader(f)
-        rows = list(reader)
+# Bronze: 50 VUs × 30s against local dev server
+uv run run.py &
+k6 run loadtest/bronze_test.js
 
-    with db.atomic():
-        for batch in chunked(rows, 100):
-            Product.insert_many(batch).execute()
+# Silver/Gold: against Docker Compose stack
+docker compose up --build -d
+k6 run loadtest/silver_test.js   # 200 VUs × 60s
+k6 run loadtest/gold_test.js     # 500 VUs × 120s
 ```
 
-## Useful Peewee Patterns
+## Useful uv Commands
 
-```python
-from peewee import fn
-from playhouse.shortcuts import model_to_dict
+| Command | What it does |
+|---|---|
+| `uv sync` | Install all dependencies |
+| `uv run <script>` | Run a script in the project venv |
+| `uv add <package>` | Add a new dependency |
+| `uv remove <package>` | Remove a dependency |
 
-# Select all
-products = Product.select()
+## Documentation
 
-# Filter
-cheap = Product.select().where(Product.price < 10)
-
-# Get by ID
-p = Product.get_by_id(1)
-
-# Create
-Product.create(name="Widget", category="Tools", price=9.99, stock=50)
-
-# Convert to dict (great for JSON responses)
-model_to_dict(p)
-
-# Aggregations
-avg_price = Product.select(fn.AVG(Product.price)).scalar()
-total = Product.select(fn.SUM(Product.stock)).scalar()
-
-# Group by
-from peewee import fn
-query = (Product
-         .select(Product.category, fn.COUNT(Product.id).alias("count"))
-         .group_by(Product.category))
-```
-
-## Tips
-
-- Use `model_to_dict` from `playhouse.shortcuts` to convert model instances to dictionaries for JSON responses.
-- Wrap bulk inserts in `db.atomic()` for transactional safety and performance.
-- The template uses `teardown_appcontext` for connection cleanup, so connections are closed even when requests fail.
-- Check `.env.example` for all available configuration options.
+| Doc | Description |
+|---|---|
+| [Architecture](docs/architecture.md) | System diagrams and component overview |
+| [API Reference](docs/api.md) | All endpoints with request/response examples |
+| [Configuration](docs/configuration.md) | All environment variables and defaults |
+| [Deploy Guide](docs/deploy_guide.md) | Docker Compose deployment and scaling |
+| [Troubleshooting](docs/troubleshooting.md) | Common issues and fixes |
+| [Runbooks](docs/runbooks.md) | Operational playbooks |
+| [Decision Log](docs/decision_log.md) | Why we chose each technology |
+| [Capacity Plan](docs/capacity_plan.md) | Load test results and scaling projections |
+| [Bottleneck Report](docs/bottleneck_report.md) | Optimization story across all tiers |

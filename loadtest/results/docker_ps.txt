@@ -1,0 +1,10 @@
+NAMES                  IMAGE                STATUS                    PORTS
+pe-hackathon-app1-1    pe-hackathon-app1    Up 3 minutes              5000/tcp
+pe-hackathon-app3-1    pe-hackathon-app3    Up 3 minutes              5000/tcp
+pe-hackathon-app2-1    pe-hackathon-app2    Up 3 minutes              5000/tcp
+pe-hackathon-nginx-1   nginx:alpine         Up 15 minutes             0.0.0.0:80->80/tcp, [::]:80->80/tcp
+pe-hackathon-db-1      postgres:16-alpine   Up 15 minutes (healthy)   5432/tcp
+pe-hackathon-redis-1   redis:7-alpine       Up 15 minutes (healthy)   6379/tcp
+pm-yc-postgres-1       postgres:16-alpine   Up 40 hours (healthy)     0.0.0.0:5432->5432/tcp, [::]:5432->5432/tcp
+pm-yc-redis-1          redis:7-alpine       Up 40 hours (healthy)     0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp
+pm-yc-minio-1          minio/minio:latest   Up 40 hours (healthy)     0.0.0.0:9000-9001->9000-9001/tcp, [::]:9000-9001->9000-9001/tcp

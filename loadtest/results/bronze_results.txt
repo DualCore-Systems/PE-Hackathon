@@ -1,0 +1,136 @@
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: loadtest/bronze_test.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 50 max VUs, 1m0s max duration (incl. graceful stop):
+              * default: 50 looping VUs for 30s (gracefulStop: 30s)
+
+
+running (0m00.9s), 50/50 VUs, 0 complete and 0 interrupted iterations
+default   [   3% ] 50 VUs  00.9s/30s
+
+running (0m01.9s), 50/50 VUs, 50 complete and 0 interrupted iterations
+default   [   6% ] 50 VUs  01.9s/30s
+
+running (0m02.9s), 50/50 VUs, 100 complete and 0 interrupted iterations
+default   [  10% ] 50 VUs  02.9s/30s
+
+running (0m03.9s), 50/50 VUs, 150 complete and 0 interrupted iterations
+default   [  13% ] 50 VUs  03.9s/30s
+
+running (0m04.9s), 50/50 VUs, 151 complete and 0 interrupted iterations
+default   [  16% ] 50 VUs  04.9s/30s
+
+running (0m05.9s), 50/50 VUs, 205 complete and 0 interrupted iterations
+default   [  20% ] 50 VUs  05.9s/30s
+
+running (0m06.9s), 50/50 VUs, 256 complete and 0 interrupted iterations
+default   [  23% ] 50 VUs  06.9s/30s
+
+running (0m07.9s), 50/50 VUs, 307 complete and 0 interrupted iterations
+default   [  26% ] 50 VUs  07.9s/30s
+
+running (0m08.9s), 50/50 VUs, 361 complete and 0 interrupted iterations
+default   [  30% ] 50 VUs  08.9s/30s
+
+running (0m09.9s), 50/50 VUs, 412 complete and 0 interrupted iterations
+default   [  33% ] 50 VUs  09.9s/30s
+
+running (0m10.9s), 50/50 VUs, 435 complete and 0 interrupted iterations
+default   [  36% ] 50 VUs  10.9s/30s
+
+running (0m11.9s), 50/50 VUs, 467 complete and 0 interrupted iterations
+default   [  40% ] 50 VUs  11.9s/30s
+
+running (0m12.9s), 50/50 VUs, 517 complete and 0 interrupted iterations
+default   [  43% ] 50 VUs  12.9s/30s
+
+running (0m13.9s), 50/50 VUs, 571 complete and 0 interrupted iterations
+default   [  46% ] 50 VUs  13.9s/30s
+
+running (0m14.9s), 50/50 VUs, 623 complete and 0 interrupted iterations
+default   [  50% ] 50 VUs  14.9s/30s
+
+running (0m15.9s), 50/50 VUs, 677 complete and 0 interrupted iterations
+default   [  53% ] 50 VUs  15.9s/30s
+
+running (0m16.9s), 50/50 VUs, 731 complete and 0 interrupted iterations
+default   [  56% ] 50 VUs  16.9s/30s
+
+running (0m17.9s), 50/50 VUs, 784 complete and 0 interrupted iterations
+default   [  60% ] 50 VUs  17.9s/30s
+
+running (0m18.9s), 50/50 VUs, 792 complete and 0 interrupted iterations
+default   [  63% ] 50 VUs  18.9s/30s
+
+running (0m19.9s), 50/50 VUs, 842 complete and 0 interrupted iterations
+default   [  66% ] 50 VUs  19.9s/30s
+
+running (0m20.9s), 50/50 VUs, 895 complete and 0 interrupted iterations
+default   [  70% ] 50 VUs  20.9s/30s
+
+running (0m21.9s), 50/50 VUs, 947 complete and 0 interrupted iterations
+default   [  73% ] 50 VUs  21.9s/30s
+
+running (0m22.9s), 50/50 VUs, 998 complete and 0 interrupted iterations
+default   [  76% ] 50 VUs  22.9s/30s
+
+running (0m23.9s), 50/50 VUs, 1051 complete and 0 interrupted iterations
+default   [  80% ] 50 VUs  23.9s/30s
+
+running (0m24.9s), 50/50 VUs, 1104 complete and 0 interrupted iterations
+default   [  83% ] 50 VUs  24.9s/30s
+
+running (0m25.9s), 50/50 VUs, 1163 complete and 0 interrupted iterations
+default   [  86% ] 50 VUs  25.9s/30s
+
+running (0m26.9s), 50/50 VUs, 1216 complete and 0 interrupted iterations
+default   [  90% ] 50 VUs  26.9s/30s
+
+running (0m27.9s), 50/50 VUs, 1275 complete and 0 interrupted iterations
+default   [  93% ] 50 VUs  27.9s/30s
+
+running (0m28.9s), 50/50 VUs, 1327 complete and 0 interrupted iterations
+default   [  96% ] 50 VUs  28.9s/30s
+
+running (0m29.9s), 50/50 VUs, 1385 complete and 0 interrupted iterations
+default   [ 100% ] 50 VUs  29.9s/30s
+
+================================================================================
+  BRONZE TIER LOAD TEST — BASELINE METRICS
+  50 VUs × 30s | Flask + Peewee + PostgreSQL
+================================================================================
+
+  OVERALL HTTP DURATION (all endpoints)
+  ─────────────────────────────────────
+  avg         : 557.59 ms
+  median      : 522.96 ms
+  p95         : 1010.82 ms   ← primary SLO target
+  p99         : N/A ms
+  max         : 1422.15 ms
+
+  THROUGHPUT & ERRORS
+  ─────────────────────────────────────
+  total reqs  : 1435
+  req/s (RPS) : 47.08
+  error rate  : 0.00%
+
+  PER-ENDPOINT BREAKDOWN
+  ─────────────────────────────────────
+  GET /products      avg=556.48 ms   p95=1011.86 ms
+  GET /products/:id  avg=559.31 ms   p95=1006.68 ms
+
+  TEST DURATION       : 30.5s
+
+================================================================================
+
+running (0m30.5s), 00/50 VUs, 1435 complete and 0 interrupted iterations
+default ✓ [ 100% ] 50 VUs  30s
