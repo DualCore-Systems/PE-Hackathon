@@ -1,6 +1,7 @@
 import csv
 import io
 import os
+import uuid
 
 from faker import Faker
 from flask import Blueprint, jsonify, request
@@ -103,6 +104,28 @@ def delete_user(user_id):
     return jsonify({"deleted": user_id})
 
 
+@users_bp.route("/users/<int:user_id>/urls", methods=["GET"])
+def get_user_urls(user_id):
+    try:
+        user = User.get_by_id(user_id)
+    except User.DoesNotExist:
+        return jsonify({"error": "user not found"}), 404
+    from app.models.url import Url
+    urls = Url.select().where(Url.user == user).order_by(Url.id)
+    return jsonify([u.to_dict() for u in urls])
+
+
+@users_bp.route("/users/<int:user_id>/events", methods=["GET"])
+def get_user_events(user_id):
+    try:
+        user = User.get_by_id(user_id)
+    except User.DoesNotExist:
+        return jsonify({"error": "user not found"}), 404
+    from app.models.event import Event
+    events = Event.select().where(Event.user == user).order_by(Event.id)
+    return jsonify([e.to_dict() for e in events])
+
+
 @users_bp.route("/users/bulk", methods=["POST"])
 def bulk_load_users():
     """
@@ -143,11 +166,16 @@ def bulk_load_users():
                 reader = csv.DictReader(fh)
                 rows = list(reader)
         else:
-            # File not found — generate synthetic users with Faker
-            rows = [
-                {"email": _fake.unique.email(), "username": _fake.unique.user_name()}
-                for _ in range(row_count)
-            ]
+            # File not found — generate synthetic users with unique identifiers
+            # to guarantee no collisions with pre-existing DB records
+            _fake.unique.clear()
+            rows = []
+            for _ in range(row_count):
+                uid = uuid.uuid4().hex[:8]
+                rows.append({
+                    "email": f"{uid}_{_fake.unique.email()}",
+                    "username": f"{uid}_{_fake.unique.user_name()}",
+                })
 
     imported = 0
     skipped = 0

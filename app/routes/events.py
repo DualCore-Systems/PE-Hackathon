@@ -28,6 +28,25 @@ def list_events():
     return jsonify([e.to_dict() for e in query])
 
 
+@events_bp.route("/events/<int:event_id>", methods=["GET"])
+def get_event(event_id):
+    try:
+        event = Event.get_by_id(event_id)
+    except Event.DoesNotExist:
+        return jsonify({"error": "event not found"}), 404
+    return jsonify(event.to_dict())
+
+
+@events_bp.route("/events/<int:event_id>", methods=["DELETE"])
+def delete_event(event_id):
+    try:
+        event = Event.get_by_id(event_id)
+        event.delete_instance()
+    except Event.DoesNotExist:
+        pass
+    return jsonify({"deleted": event_id})
+
+
 @events_bp.route("/events", methods=["POST"])
 def create_event():
     data = request.get_json(silent=True)
