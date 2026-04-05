@@ -1,0 +1,60 @@
+name: CI — Tests & Coverage
+
+on:
+  push:
+    branches: [main, reliability-engineering]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: hackathon_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Set up Python 3.13
+        run: uv python install 3.13
+
+      - name: Install dependencies
+        run: uv sync --dev
+
+      - name: Run tests with coverage
+        env:
+          DATABASE_HOST: localhost
+          DATABASE_PORT: "5432"
+          DATABASE_NAME: hackathon_db
+          DATABASE_USER: postgres
+          DATABASE_PASSWORD: postgres
+          REDIS_HOST: localhost
+          REDIS_PORT: "6379"
+        run: uv run pytest -v --tb=short

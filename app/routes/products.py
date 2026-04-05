@@ -29,13 +29,46 @@ def list_products():
 
 @products_bp.route("/products", methods=["POST"])
 def create_product():
-    data = request.get_json(force=True)
+    data = request.get_json(silent=True)
+    if data is None:
+        return jsonify({"error": "invalid or missing JSON body"}), 400
+
+    errors = []
+    # Required fields
+    for field in ("name", "category", "price", "stock"):
+        if field not in data:
+            errors.append(f"'{field}' is required")
+
+    if errors:
+        return jsonify({"error": "validation failed", "details": errors}), 400
+
+    # Type / value validation
+    if not isinstance(data["name"], str) or not data["name"].strip():
+        errors.append("'name' must be a non-empty string")
+    if not isinstance(data["category"], str) or not data["category"].strip():
+        errors.append("'category' must be a non-empty string")
+    try:
+        price = float(data["price"])
+        if price < 0:
+            errors.append("'price' must be >= 0")
+    except (TypeError, ValueError):
+        errors.append("'price' must be a number")
+    try:
+        stock = int(data["stock"])
+        if stock < 0:
+            errors.append("'stock' must be >= 0")
+    except (TypeError, ValueError):
+        errors.append("'stock' must be an integer")
+
+    if errors:
+        return jsonify({"error": "validation failed", "details": errors}), 400
+
     product = Product.create(
-        name=data["name"],
-        category=data["category"],
+        name=data["name"].strip(),
+        category=data["category"].strip(),
         description=data.get("description"),
-        price=data["price"],
-        stock=data["stock"],
+        price=price,
+        stock=stock,
     )
     # Invalidate the list cache so next GET /products is fresh
     cache_delete(PRODUCTS_ALL_KEY)
