@@ -32,7 +32,7 @@ class TestUsers:
     def test_get_user_not_found(self, client):
         resp = client.get("/users/99999")
         assert resp.status_code == 404
-        assert resp.get_json()["error"] == "not found"
+        assert resp.get_json()["error"] == "user not found"
 
     def test_create_user(self, client):
         resp = client.post("/users", json={"email": "new@example.com", "username": "newuser"})

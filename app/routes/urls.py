@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, redirect, request
 from peewee import IntegrityError
 
+from app.models.event import Event
 from app.models.url import Url, _gen_short_code
 from app.models.user import User
 
@@ -110,10 +111,47 @@ def delete_url(url_id):
     return jsonify({"deleted": url_id})
 
 
+@urls_bp.route("/urls/<int:url_id>/events", methods=["GET"])
+def get_url_events(url_id):
+    try:
+        url = Url.get_by_id(url_id)
+    except Url.DoesNotExist:
+        return jsonify({"error": "url not found"}), 404
+    events = Event.select().where(Event.url == url).order_by(Event.id)
+    return jsonify([e.to_dict() for e in events])
+
+
+@urls_bp.route("/urls/<int:url_id>/stats", methods=["GET"])
+def get_url_stats(url_id):
+    try:
+        url = Url.get_by_id(url_id)
+    except Url.DoesNotExist:
+        return jsonify({"error": "url not found"}), 404
+    total_events = Event.select().where(Event.url == url).count()
+    clicks = Event.select().where(Event.url == url, Event.event_type == "click").count()
+    return jsonify({
+        "url_id": url_id,
+        "total_events": total_events,
+        "clicks": clicks,
+    })
+
+
 @urls_bp.route("/<short_code>", methods=["GET"])
 def redirect_short_code(short_code):
     try:
         url = Url.get(Url.short_code == short_code, Url.is_active == True)  # noqa: E712
     except Url.DoesNotExist:
         return jsonify({"error": "not found"}), 404
+
+    # Track the click event
+    try:
+        Event.create(
+            event_type="click",
+            url=url,
+            user=None,
+            details=None,
+        )
+    except Exception:
+        pass  # don't let tracking failures break redirects
+
     return redirect(url.original_url, code=302)
