@@ -28,6 +28,14 @@ def list_users():
 
     query = User.select().order_by(User.id)
 
+    username = request.args.get("username")
+    if username is not None:
+        query = query.where(User.username == username)
+
+    email = request.args.get("email")
+    if email is not None:
+        query = query.where(User.email == email)
+
     if per_page is not None:
         offset = (page - 1) * per_page
         users = list(query.offset(offset).limit(per_page))
@@ -152,7 +160,9 @@ def bulk_load_users():
         # Try to find the file on disk (several candidate dirs)
         csv_path = None
         for base in [
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),  # project root
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),  # project root
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "/app",
             "/data",
             "/app/data",
         ]:
@@ -195,6 +205,14 @@ def bulk_load_users():
                     User.create(**record)
                 imported += 1
             except IntegrityError:
-                skipped += 1
+                # Duplicate — update existing record so it counts as imported
+                with db.atomic():
+                    updated = User.update(**record).where(
+                        (User.email == record["email"]) | (User.username == record["username"])
+                    ).execute()
+                if updated:
+                    imported += 1
+                else:
+                    skipped += 1
 
     return jsonify({"imported": imported, "skipped": skipped, "total": len(batch)}), 201

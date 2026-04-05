@@ -1,7 +1,11 @@
+import csv
+import io
 import json
 
 from flask import Blueprint, jsonify, request
+from peewee import fn
 
+from app.database import db
 from app.models.event import Event
 from app.models.url import Url
 from app.models.user import User
@@ -86,3 +90,73 @@ def create_event():
     )
 
     return jsonify(event.to_dict()), 201
+
+
+@events_bp.route("/events/bulk", methods=["POST"])
+def bulk_load_events():
+    """Accept multipart CSV upload or JSON body with filename."""
+    rows = []
+
+    if request.files and "file" in request.files:
+        f = request.files["file"]
+        content = f.read().decode("utf-8")
+        reader = csv.DictReader(io.StringIO(content))
+        rows = list(reader)
+    else:
+        data = request.get_json(silent=True) or {}
+        import os
+        filename = data.get("file", "events.csv")
+        csv_path = None
+        for base in [
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "/app",
+            "/data",
+            "/app/data",
+        ]:
+            candidate = os.path.join(base, filename)
+            if os.path.isfile(candidate):
+                csv_path = candidate
+                break
+        if csv_path:
+            with open(csv_path, newline="", encoding="utf-8") as fh:
+                reader = csv.DictReader(fh)
+                rows = list(reader)
+
+    imported = 0
+    skipped = 0
+    for row in rows:
+        event_type = str(row.get("event_type", "")).strip()
+        url_id = row.get("url_id")
+        if not event_type or not url_id:
+            skipped += 1
+            continue
+        try:
+            with db.atomic():
+                Event.create(
+                    event_type=event_type,
+                    url=int(url_id),
+                    user=int(row["user_id"]) if row.get("user_id") else None,
+                    details=row.get("details"),
+                    created_at=row.get("timestamp") or row.get("created_at"),
+                )
+            imported += 1
+        except Exception:
+            skipped += 1
+
+    return jsonify({"imported": imported, "skipped": skipped, "total": imported + skipped}), 201
+
+
+@events_bp.route("/events/stats", methods=["GET"])
+def event_stats():
+    """Return aggregate event statistics."""
+    total = Event.select().count()
+    by_type = (
+        Event.select(Event.event_type, fn.COUNT(Event.id).alias("count"))
+        .group_by(Event.event_type)
+        .dicts()
+    )
+    return jsonify({
+        "total": total,
+        "by_type": {row["event_type"]: row["count"] for row in by_type},
+    })

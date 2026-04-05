@@ -78,7 +78,7 @@ class TestUsers:
         assert resp.status_code == 200
 
     def test_bulk_load_users(self, client):
-        resp = client.post("/users/bulk", json={"file": "users.csv", "row_count": 5})
+        resp = client.post("/users/bulk", json={"file": "nonexistent.csv", "row_count": 5})
         assert resp.status_code == 201
         data = resp.get_json()
         assert data["imported"] == 5

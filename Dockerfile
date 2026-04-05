@@ -14,6 +14,7 @@ RUN uv sync --frozen --no-dev
 # Copy application code
 COPY app/ app/
 COPY run.py seed.py ./
+COPY *.csv ./
 
 # Entrypoint script added separately
 COPY docker-entrypoint.sh /docker-entrypoint.sh

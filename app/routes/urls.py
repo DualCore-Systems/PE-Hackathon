@@ -1,6 +1,11 @@
+import csv
+import io
+import os
+
 from flask import Blueprint, jsonify, redirect, request
 from peewee import IntegrityError
 
+from app.database import db
 from app.models.event import Event
 from app.models.url import Url, _gen_short_code
 from app.models.user import User
@@ -134,6 +139,62 @@ def get_url_stats(url_id):
         "total_events": total_events,
         "clicks": clicks,
     })
+
+
+@urls_bp.route("/urls/bulk", methods=["POST"])
+def bulk_load_urls():
+    """Accept multipart CSV or JSON body with filename."""
+    rows = []
+
+    if request.files and "file" in request.files:
+        f = request.files["file"]
+        content = f.read().decode("utf-8")
+        reader = csv.DictReader(io.StringIO(content))
+        rows = list(reader)
+    else:
+        data = request.get_json(silent=True) or {}
+        filename = data.get("file", "urls.csv")
+        csv_path = None
+        for base in [
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "/app",
+            "/data",
+            "/app/data",
+        ]:
+            candidate = os.path.join(base, filename)
+            if os.path.isfile(candidate):
+                csv_path = candidate
+                break
+        if csv_path:
+            with open(csv_path, newline="", encoding="utf-8") as fh:
+                reader = csv.DictReader(fh)
+                rows = list(reader)
+
+    imported = 0
+    skipped = 0
+    for row in rows:
+        original_url = str(row.get("original_url", "")).strip()
+        short_code = str(row.get("short_code", "")).strip()
+        user_id = row.get("user_id")
+        if not original_url or not short_code or not user_id:
+            skipped += 1
+            continue
+        try:
+            with db.atomic():
+                Url.create(
+                    original_url=original_url,
+                    short_code=short_code,
+                    title=row.get("title"),
+                    user=int(user_id),
+                    is_active=str(row.get("is_active", "True")).lower() == "true",
+                    created_at=row.get("created_at"),
+                )
+            imported += 1
+        except (IntegrityError, Exception):
+            skipped += 1
+
+    return jsonify({"imported": imported, "skipped": skipped, "total": imported + skipped}), 201
 
 
 @urls_bp.route("/<short_code>", methods=["GET"])
