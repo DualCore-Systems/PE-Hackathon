@@ -41,7 +41,7 @@ def get_user(user_id):
     try:
         user = User.get_by_id(user_id)
     except User.DoesNotExist:
-        return jsonify({"error": "not found"}), 404
+        return jsonify({"error": "user not found"}), 404
     return jsonify(user.to_dict())
 
 
@@ -74,7 +74,7 @@ def update_user(user_id):
     try:
         user = User.get_by_id(user_id)
     except User.DoesNotExist:
-        return jsonify({"error": "not found"}), 404
+        return jsonify({"error": "user not found"}), 404
 
     data = request.get_json(silent=True)
     if data is None:
