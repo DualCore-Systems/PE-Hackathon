@@ -46,6 +46,7 @@ echo "Starting Flask with gunicorn..."
 exec uv run gunicorn \
   --bind 0.0.0.0:5000 \
   --workers 4 \
+  --worker-class gevent \
   --timeout 120 \
   --access-logfile - \
   "app:create_app()"

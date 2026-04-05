@@ -4,6 +4,8 @@ from werkzeug.exceptions import HTTPException
 
 from app.cache import init_cache
 from app.database import init_db
+from app.logging_config import setup_logging
+from app.metrics import setup_metrics
 from app.routes import register_routes
 
 
@@ -12,16 +14,46 @@ def create_app():
 
     app = Flask(__name__)
 
+    setup_logging(app)
     init_db(app)
     init_cache()
 
     from app import models  # noqa: F401 - registers models with Peewee
 
     register_routes(app)
+    setup_metrics(app)
 
     @app.route("/health")
     def health():
+        """Liveness check — always returns 200 if the process is running."""
         return jsonify(status="ok")
+
+    @app.route("/health/ready")
+    def readiness():
+        """Readiness check — verifies DB and Redis are reachable."""
+        checks = {}
+        healthy = True
+
+        # Check PostgreSQL
+        try:
+            from app.database import db
+            db.execute_sql("SELECT 1")
+            checks["database"] = "ok"
+        except Exception as e:
+            checks["database"] = f"error: {e}"
+            healthy = False
+
+        # Check Redis
+        try:
+            from app.cache import _client_or_raise
+            _client_or_raise().ping()
+            checks["cache"] = "ok"
+        except Exception as e:
+            checks["cache"] = f"error: {e}"
+            healthy = False
+
+        status_code = 200 if healthy else 503
+        return jsonify(status="ok" if healthy else "degraded", checks=checks), status_code
 
     # ── JSON error handlers ──────────────────────────────────────────────
     @app.errorhandler(400)

@@ -2,7 +2,7 @@ name: CI — Tests & Coverage
 
 on:
   push:
-    branches: [main, reliability-engineering]
+    branches: [main, reliability-engineering, incident-response]
   pull_request:
     branches: [main]
 
@@ -57,4 +57,4 @@ jobs:
           DATABASE_PASSWORD: postgres
           REDIS_HOST: localhost
           REDIS_PORT: "6379"
-        run: uv run pytest -v --tb=short
+        run: uv run pytest -v --tb=short --cov=app --cov-report=term-missing --cov-fail-under=70

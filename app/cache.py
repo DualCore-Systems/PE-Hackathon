@@ -41,11 +41,12 @@ def _client_or_raise() -> redis.Redis:
 def cache_get(key: str) -> dict | list | None:
     """Return cached value and increment hit counter, or None on miss/error."""
     try:
-        raw = _client_or_raise().get(key)
+        c = _client_or_raise()
+        raw = c.get(key)
         if raw is None:
-            _client.incr(MISS_COUNTER)
+            c.incr(MISS_COUNTER)
             return None
-        _client.incr(HIT_COUNTER)
+        c.incr(HIT_COUNTER)
         return json.loads(raw)
     except Exception:
         return None
