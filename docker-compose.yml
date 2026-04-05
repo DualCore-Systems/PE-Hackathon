@@ -91,5 +91,54 @@ services:
       - app2
       - app3
 
+  # ── Monitoring Stack ──────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.53.4
+    restart: always
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+      - prometheus_data:/prometheus
+    depends_on:
+      - app1
+      - app2
+      - app3
+
+  grafana:
+    image: grafana/grafana:11.6.0
+    restart: always
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/app-dashboard.json
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    restart: always
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+
+  discord-webhook:
+    image: benjojo/alertmanager-discord:latest
+    restart: always
+    environment:
+      DISCORD_WEBHOOK: "${DISCORD_WEBHOOK_URL:-https://discord.com/api/webhooks/placeholder}"
+    ports:
+      - "9094:9094"
+
 volumes:
   pgdata:
+  prometheus_data:
+  grafana_data:

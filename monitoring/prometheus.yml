@@ -1,0 +1,27 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - /etc/prometheus/alert_rules.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
+
+scrape_configs:
+  - job_name: "flask-app"
+    metrics_path: /metrics
+    scrape_interval: 5s
+    static_configs:
+      - targets:
+          - "app1:5000"
+          - "app2:5000"
+          - "app3:5000"
+        labels:
+          service: "pe-hackathon"
+
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
