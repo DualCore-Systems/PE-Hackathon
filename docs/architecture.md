@@ -157,10 +157,41 @@ graph TB
 | Component | Choice | Why |
 |---|---|---|
 | Load balancer | Nginx round-robin | Stateless replicas; no session affinity needed |
-| App server | Gunicorn sync workers | Predictable memory; cache HITs are I/O-not-CPU |
+| App server | Gunicorn gevent workers | Async I/O handles ~200 concurrent connections per worker vs sync's 1 |
 | Cache | Redis (shared) | All 3 replicas read the same key space; counters are atomic |
 | Cache TTL | 60 seconds | Balance between freshness and hit rate; adjustable via `CACHE_TTL` in `app/cache.py` |
 | DB persistence | pgdata named volume | Survives `docker compose down`; removed only with `down -v` |
 | Seed ownership | app1 only (`SEED_DB=true`) | Prevents duplicate inserts on parallel startup |
 
+| Monitoring | Prometheus + Grafana | Industry-standard observability stack; free, self-hosted |
+| Alerting | Alertmanager + Discord | Fires alerts within 30s; routes to Discord for team notifications |
+| Logging | Structured JSON (pythonjsonlogger) | Machine-parseable; includes timestamp, level, component, latency |
+| Testing | pytest + pytest-cov (88%) | In-memory SQLite for fast tests; CI gate at 70% coverage |
+
 See [docs/decision_log.md](decision_log.md) for the full rationale on each choice.
+
+---
+
+## Monitoring Stack
+
+```mermaid
+graph LR
+    A1[App 1] & A2[App 2] & A3[App 3] -->|/metrics| P[Prometheus :9090]
+    P -->|queries| G[Grafana :3001]
+    P -->|alert rules| AM[Alertmanager :9093]
+    AM -->|webhook| DW[Discord]
+
+    style P fill:#E6522C,color:#fff
+    style G fill:#F46800,color:#fff
+    style AM fill:#E6522C,color:#fff
+    style DW fill:#5865F2,color:#fff
+```
+
+**Four Golden Signals tracked on the Grafana dashboard:**
+
+| Signal | Metric | Panel |
+|---|---|---|
+| **Latency** | `http_request_duration_seconds` (p50/p95/p99) | Line chart |
+| **Traffic** | `rate(http_requests_total[1m])` | Line chart |
+| **Errors** | `http_errors_total / http_requests_total` | Line chart with thresholds |
+| **Saturation** | `count(up{job="flask-app"} == 1)` | Stat panel (healthy instances) |

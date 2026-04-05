@@ -1,10 +1,37 @@
 # Quest Completion Report
 
-**Project:** MLH PE Hackathon — Scalability Engineering  
-**Stack:** Flask 3.1 · Peewee ORM · PostgreSQL 16 · Redis 7 · Nginx · Gunicorn · Docker Compose  
-**Test tool:** k6  
+**Project:** MLH PE Hackathon — Production Engineering  
+**Stack:** Flask 3.1 · Peewee ORM · PostgreSQL 16 · Redis 7 · Nginx · Gunicorn (gevent) · Prometheus · Grafana · Alertmanager · Docker Compose  
+**Test tools:** k6 (load testing), pytest (unit/integration)  
 **Environment:** Docker Desktop on macOS (Apple Silicon), all services co-located  
 **Final verification date:** 2026-04-05
+
+---
+
+## All 4 Quests Completed at Gold Tier
+
+| Quest | Bronze | Silver | Gold | Bonus |
+|---|---|---|---|---|
+| Scalability Engineering | Done | Done | Done | — |
+| Reliability Engineering | Done | Done | Done | +50 hidden bonus |
+| Incident Response | Done | Done | Done | — |
+| Documentation | Done | Done | Done | Bonus quest |
+
+### Reliability Highlights
+- **47 pytest tests** (unit + integration + cache) with **88% code coverage**
+- GitHub Actions CI blocks deploys if tests fail or coverage drops below 70%
+- Input validation rejects bad data with detailed JSON errors (never crashes)
+- Unique constraint on product names prevents duplicates (409 Conflict)
+- `restart: always` on all Docker services for chaos engineering resilience
+- `/health/ready` endpoint verifies DB + Redis connectivity
+
+### Incident Response Highlights
+- **Structured JSON logging** with timestamps, log levels, and components
+- **Prometheus metrics** (`/metrics`) scraped every 5s from all 3 app instances
+- **Grafana dashboard** tracking 4 golden signals: Latency, Traffic, Errors, Saturation
+- **Alertmanager** with rules for ServiceDown (30s), HighErrorRate (>5%), HighLatency (p95 >2s)
+- **Discord webhook** integration for real-time alert notifications
+- **10 containers** total: 3 app + nginx + db + redis + prometheus + grafana + alertmanager + discord-webhook
 
 ---
 
