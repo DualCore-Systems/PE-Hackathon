@@ -20,6 +20,16 @@ def init_db(app):
     )
     db.initialize(database)
 
+    # Ensure all tables exist at startup (safe=True means no-op if already present)
+    from app.models.product import Product
+    from app.models.user import User
+    from app.models.url import Url
+    from app.models.event import Event
+
+    database.connect()
+    database.create_tables([Product, User, Url, Event], safe=True)
+    database.close()
+
     @app.before_request
     def _db_connect():
         db.connect(reuse_if_open=True)
