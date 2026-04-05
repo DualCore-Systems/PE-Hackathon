@@ -1,8 +1,12 @@
 # MLH PE Hackathon — Flask + Peewee + PostgreSQL + Redis
 
-A scalability-focused hackathon starter. The stack runs locally as a single Flask process for development and scales to a 3-replica Nginx-load-balanced cluster with Redis caching via Docker Compose.
+A production-engineering hackathon project covering **all 4 quests at Gold tier**: Scalability, Reliability, Incident Response, and Documentation.
 
-**Stack:** Python 3.13 · Flask 3.1 · Peewee ORM · PostgreSQL 16 · Redis 7 · Nginx · Gunicorn · uv
+The stack runs locally as a single Flask process for development and scales to a 3-replica Nginx-load-balanced cluster with Redis caching, Prometheus/Grafana monitoring, and automated alerting via Docker Compose.
+
+**Stack:** Python 3.13 · Flask 3.1 · Peewee ORM · PostgreSQL 16 · Redis 7 · Nginx · Gunicorn (gevent) · Prometheus · Grafana · Alertmanager · uv
+
+**Quality:** 47 tests · 88% coverage · CI/CD via GitHub Actions · Structured JSON logging
 
 ---
 
@@ -78,19 +82,29 @@ curl http://127.0.0.1:5000/products | python3 -m json.tool | head -20
 
 ## Quick Start (full Docker Compose stack)
 
-Runs Nginx + 3 Flask replicas + PostgreSQL + Redis — no local Python needed.
+Runs Nginx + 3 Flask replicas + PostgreSQL + Redis + Prometheus + Grafana + Alertmanager — no local Python needed.
 
 ```bash
-# Build images and start all services
+# Build images and start all services (10 containers)
 docker compose up --build -d
 
-# Wait ~15 seconds for seeding, then verify
+# Wait for health checks to pass, then verify
 curl http://127.0.0.1:80/health
 # → {"status":"ok"}
 
-curl http://127.0.0.1:80/cache/stats
-# → {"hit_rate":"N/A","hits":0,"misses":1,"total_requests":1}
+curl http://127.0.0.1:80/health/ready
+# → {"status":"ok","checks":{"database":"ok","cache":"ok"}}
+
+curl http://127.0.0.1:80/products | python3 -m json.tool | head -10
 ```
+
+**Monitoring dashboards:**
+
+| Service | URL | Credentials |
+|---|---|---|
+| Grafana | http://127.0.0.1:3001 | admin / admin |
+| Prometheus | http://127.0.0.1:9090 | — |
+| Alertmanager | http://127.0.0.1:9093 | — |
 
 To stop:
 ```bash
@@ -105,16 +119,34 @@ docker compose down -v       # also deletes database volume
 ```
 PE-Hackathon/
 ├── app/
-│   ├── __init__.py          # App factory: create_app()
+│   ├── __init__.py          # App factory + JSON error handlers + health endpoints
 │   ├── cache.py             # Redis cache wrapper (get/set/delete/stats)
 │   ├── database.py          # Peewee DatabaseProxy + connection lifecycle hooks
+│   ├── logging_config.py    # Structured JSON logging setup
+│   ├── metrics.py           # Prometheus metrics + /metrics endpoint
 │   ├── models/
 │   │   ├── __init__.py      # Import all models here
-│   │   └── product.py       # Product model
+│   │   └── product.py       # Product model (unique name constraint)
 │   └── routes/
 │       ├── __init__.py      # register_routes() — add blueprints here
-│       ├── products.py      # GET/POST /products, GET /products/<id>
+│       ├── products.py      # GET/POST /products, GET /products/<id> + validation
 │       └── cache_stats.py   # GET /cache/stats
+├── tests/
+│   ├── conftest.py          # Fixtures: in-memory SQLite, Flask test client
+│   ├── test_api.py          # Integration tests for all endpoints
+│   ├── test_cache.py        # Cache module unit tests
+│   └── test_models.py       # Product model CRUD tests
+├── .github/
+│   └── workflows/
+│       └── ci.yml           # GitHub Actions: pytest + coverage on every push/PR
+├── monitoring/
+│   ├── prometheus.yml       # Prometheus scrape config
+│   ├── alert_rules.yml      # ServiceDown, HighErrorRate, HighLatency alerts
+│   ├── alertmanager.yml     # Alert routing to Discord
+│   └── grafana/
+│       ├── provisioning/    # Auto-configured datasource + dashboard provider
+│       └── dashboards/
+│           └── app-dashboard.json  # Four Golden Signals dashboard
 ├── docs/
 │   ├── architecture.md      # System diagrams (Mermaid)
 │   ├── api.md               # Full API reference
@@ -124,23 +156,18 @@ PE-Hackathon/
 │   ├── runbooks.md          # Operational playbooks
 │   ├── decision_log.md      # Why we chose each technology
 │   ├── capacity_plan.md     # Load test results + scaling projections
-│   └── bottleneck_report.md # Bronze → Silver → Gold optimization story
+│   ├── bottleneck_report.md # Bronze → Silver → Gold optimization story
+│   └── failure_modes.md     # What happens when things break
 ├── loadtest/
 │   ├── bronze_test.js       # k6: 50 VUs × 30s
 │   ├── silver_test.js       # k6: 200 VUs × 60s
 │   ├── gold_test.js         # k6: 500 VUs × 120s
-│   └── results/
-│       ├── bronze_results.txt
-│       ├── silver_results.txt
-│       ├── gold_results.txt
-│       └── docker_ps.txt
-├── .env.example             # Environment variable template
-├── .python-version          # Python 3.13 (used by uv)
-├── docker-compose.yml       # Full stack: Nginx + 3× app + Postgres + Redis
-├── docker-entrypoint.sh     # Container startup: wait → seed → gunicorn
+│   └── results/             # Captured test outputs
+├── docker-compose.yml       # Full stack: 10 services (app × 3 + infra + monitoring)
+├── docker-entrypoint.sh     # Container startup: wait → seed → gunicorn (gevent)
 ├── Dockerfile               # App image build
 ├── nginx.conf               # Round-robin upstream config
-├── pyproject.toml           # Dependencies (uv)
+├── pyproject.toml           # Dependencies + pytest config (uv)
 ├── run.py                   # Local dev entry point: uv run run.py
 └── seed.py                  # Idempotent: creates tables + inserts 100 products
 ```
@@ -184,6 +211,21 @@ def register_routes(app):
     app.register_blueprint(your_bp)
 ```
 
+## Running Tests
+
+```bash
+# Run all tests with coverage
+uv run pytest -v
+
+# Run with detailed coverage report
+uv run pytest --cov=app --cov-report=term-missing
+
+# Run a specific test file
+uv run pytest tests/test_api.py -v
+```
+
+CI runs these automatically on every push/PR via GitHub Actions. The build fails if coverage drops below 70%.
+
 ## Running Load Tests
 
 ```bash
@@ -222,3 +264,4 @@ k6 run loadtest/gold_test.js     # 500 VUs × 120s
 | [Decision Log](docs/decision_log.md) | Why we chose each technology |
 | [Capacity Plan](docs/capacity_plan.md) | Load test results and scaling projections |
 | [Bottleneck Report](docs/bottleneck_report.md) | Optimization story across all tiers |
+| [Failure Modes](docs/failure_modes.md) | What happens when components break |

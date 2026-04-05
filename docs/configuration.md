@@ -125,10 +125,11 @@ Set in `docker-entrypoint.sh`. Not environment variables — change the script a
 | Setting | Current value | Description |
 |---|---|---|
 | `--workers` | `4` | Number of worker processes per replica |
+| `--worker-class` | `gevent` | Async I/O workers (~200 concurrent connections per worker) |
 | `--timeout` | `120` | Worker timeout in seconds (kills slow workers) |
 | `--bind` | `0.0.0.0:5000` | Listen address inside the container |
 
-**Formula for worker count:** `2 × CPU_cores + 1` is the gunicorn recommendation for sync workers. For I/O-bound workloads behind Redis (most requests are cache HITs), consider `gevent` workers instead.
+**Worker type:** We use `gevent` async workers for high concurrency. Each gevent worker handles ~200 concurrent connections vs sync's 1 connection per worker, dramatically improving throughput under load.
 
 ---
 
@@ -162,6 +163,22 @@ REDIS_PORT=6379
 
 # ── Flask ─────────────────────────────────────────────────────────────────────
 FLASK_DEBUG=true
+
+# ── Monitoring ────────────────────────────────────────────────────────────────
+DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_TOKEN
 ```
 
 > Copy `.env.example` to `.env` and edit as needed. The `.env` file is git-ignored.
+
+---
+
+## Monitoring Services
+
+| Service | Port | Purpose |
+|---|---|---|
+| Prometheus | 9090 | Scrapes `/metrics` from all 3 app instances every 5s |
+| Grafana | 3001 | Dashboards (login: admin/admin) |
+| Alertmanager | 9093 | Processes alert rules, routes to Discord |
+| Discord Webhook | 9094 | Bridges Alertmanager → Discord channel |
+
+Set `DISCORD_WEBHOOK_URL` to receive alerts in Discord. If unset, the webhook container runs but alerts go nowhere.

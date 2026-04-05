@@ -32,6 +32,78 @@ curl http://127.0.0.1:80/health
 
 ---
 
+## GET /health/ready
+
+Readiness check. Verifies that both PostgreSQL and Redis are reachable. Use this to confirm the app can actually serve traffic, not just that the process is running.
+
+### Request
+
+```
+GET /health/ready
+```
+
+### Response `200 OK` (all dependencies healthy)
+
+```json
+{
+  "status": "ok",
+  "checks": {
+    "database": "ok",
+    "cache": "ok"
+  }
+}
+```
+
+### Response `503 Service Unavailable` (one or more dependencies down)
+
+```json
+{
+  "status": "degraded",
+  "checks": {
+    "database": "ok",
+    "cache": "error: Connection refused"
+  }
+}
+```
+
+### Example
+
+```bash
+curl http://127.0.0.1:80/health/ready
+```
+
+---
+
+## GET /metrics
+
+Exposes application metrics in Prometheus text format. Scraped by Prometheus every 5 seconds.
+
+### Request
+
+```
+GET /metrics
+```
+
+### Response `200 OK`
+
+Returns Prometheus exposition format (`text/plain`). Key metrics:
+
+| Metric | Type | Description |
+|---|---|---|
+| `http_requests_total` | Counter | Total requests by method, endpoint, status |
+| `http_request_duration_seconds` | Histogram | Request latency (p50/p95/p99) |
+| `http_errors_total` | Counter | 4xx and 5xx responses |
+| `app_up` | Gauge | 1 if the app is running |
+| `app_start_time_seconds` | Gauge | Unix timestamp of app start |
+
+### Example
+
+```bash
+curl http://127.0.0.1:80/metrics | grep http_requests_total
+```
+
+---
+
 ## GET /products
 
 Returns all products ordered by `id` ascending. Response is cached in Redis for 60 seconds.

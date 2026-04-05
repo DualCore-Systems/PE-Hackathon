@@ -41,8 +41,25 @@ curl http://127.0.0.1:80/cache/stats     # {"hits":0,"misses":…}
 | `app2` | `pe-hackathon-app2` | 5000 | none | Flask replica |
 | `app3` | `pe-hackathon-app3` | 5000 | none | Flask replica |
 | `nginx` | `nginx:alpine` | 80 | **80** | Load balancer |
+| `prometheus` | `prom/prometheus:v2.53.4` | 9090 | **9090** | Metrics collector |
+| `grafana` | `grafana/grafana:11.6.0` | 3000 | **3001** | Dashboards (admin/admin) |
+| `alertmanager` | `prom/alertmanager:v0.28.1` | 9093 | **9093** | Alert routing |
+| `discord-webhook` | `benjojo/alertmanager-discord` | 9094 | **9094** | Discord notifications |
 
-All services share the `pe-hackathon_default` bridge network. Only Nginx is exposed to the host.
+All services share the `pe-hackathon_default` bridge network. Nginx, Prometheus, Grafana, and Alertmanager are exposed to the host.
+
+### Accessing the Monitoring Stack
+
+| Dashboard | URL | Notes |
+|---|---|---|
+| Grafana | http://127.0.0.1:3001 | Login: admin/admin. Pre-provisioned with "Four Golden Signals" dashboard |
+| Prometheus | http://127.0.0.1:9090 | Query metrics, check target health |
+| Alertmanager | http://127.0.0.1:9093 | View active/silenced alerts |
+
+To enable Discord alerts, set `DISCORD_WEBHOOK_URL` before starting:
+```bash
+DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/..." docker compose up -d discord-webhook
+```
 
 ---
 
