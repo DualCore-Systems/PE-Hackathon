@@ -48,5 +48,6 @@ exec uv run gunicorn \
   --workers 4 \
   --worker-class gevent \
   --timeout 120 \
+  --keep-alive 5 \
   --access-logfile - \
   "app:create_app()"
