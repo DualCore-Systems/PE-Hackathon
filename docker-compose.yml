@@ -2,6 +2,7 @@ services:
 
   db:
     image: postgres:16-alpine
+    restart: always
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -16,6 +17,7 @@ services:
 
   redis:
     image: redis:7-alpine
+    restart: always
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -24,6 +26,7 @@ services:
 
   app1:
     build: .
+    restart: always
     environment:
       DATABASE_HOST: db
       DATABASE_PORT: 5432
@@ -42,6 +45,7 @@ services:
 
   app2:
     build: .
+    restart: always
     environment:
       DATABASE_HOST: db
       DATABASE_PORT: 5432
@@ -59,6 +63,7 @@ services:
 
   app3:
     build: .
+    restart: always
     environment:
       DATABASE_HOST: db
       DATABASE_PORT: 5432
@@ -76,6 +81,7 @@ services:
 
   nginx:
     image: nginx:alpine
+    restart: always
     ports:
       - "80:80"
     volumes:
