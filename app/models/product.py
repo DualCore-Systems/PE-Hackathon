@@ -4,7 +4,7 @@ from app.database import BaseModel
 
 
 class Product(BaseModel):
-    name = CharField()
+    name = CharField(unique=True)
     category = CharField()
     description = TextField(null=True)
     price = DecimalField(decimal_places=2)

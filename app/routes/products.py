@@ -1,4 +1,5 @@
 from flask import Blueprint, jsonify, make_response, request
+from peewee import IntegrityError
 from playhouse.shortcuts import model_to_dict
 
 from app.cache import PRODUCT_KEY, PRODUCTS_ALL_KEY, cache_delete, cache_get, cache_set
@@ -70,13 +71,17 @@ def create_product():
     if errors:
         return jsonify({"error": "validation failed", "details": errors}), 400
 
-    product = Product.create(
-        name=data["name"].strip(),
-        category=data["category"].strip(),
-        description=data.get("description"),
-        price=price,
-        stock=stock,
-    )
+    try:
+        product = Product.create(
+            name=data["name"].strip(),
+            category=data["category"].strip(),
+            description=data.get("description"),
+            price=price,
+            stock=stock,
+        )
+    except IntegrityError:
+        return jsonify({"error": "a product with this name already exists"}), 409
+
     # Invalidate the list cache so next GET /products is fresh
     cache_delete(PRODUCTS_ALL_KEY)
     return jsonify(model_to_dict(product)), 201

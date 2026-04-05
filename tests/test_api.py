@@ -134,6 +134,17 @@ class TestCreateProduct:
         assert resp.status_code == 400
         assert any("255" in d for d in resp.get_json()["details"])
 
+    def test_create_product_duplicate_name(self, client, sample_product):
+        payload = {
+            "name": "Test Widget",
+            "category": "Electronics",
+            "price": 5,
+            "stock": 1,
+        }
+        resp = client.post("/products", json=payload)
+        assert resp.status_code == 409
+        assert "already exists" in resp.get_json()["error"]
+
 
 class TestReadiness:
     def test_readiness_returns_checks(self, client):
