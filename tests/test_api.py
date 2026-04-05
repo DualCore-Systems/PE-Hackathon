@@ -122,6 +122,27 @@ class TestCreateProduct:
         assert data["category"] == "Books"
 
 
+    def test_create_product_name_too_long(self, client):
+        payload = {"name": "A" * 256, "category": "X", "price": 5, "stock": 1}
+        resp = client.post("/products", json=payload)
+        assert resp.status_code == 400
+        assert any("255" in d for d in resp.get_json()["details"])
+
+    def test_create_product_category_too_long(self, client):
+        payload = {"name": "OK", "category": "B" * 256, "price": 5, "stock": 1}
+        resp = client.post("/products", json=payload)
+        assert resp.status_code == 400
+        assert any("255" in d for d in resp.get_json()["details"])
+
+
+class TestReadiness:
+    def test_readiness_returns_checks(self, client):
+        resp = client.get("/health/ready")
+        data = resp.get_json()
+        assert "checks" in data
+        assert "status" in data
+
+
 class TestErrorHandlers:
     def test_404_unknown_route(self, client):
         resp = client.get("/nonexistent")

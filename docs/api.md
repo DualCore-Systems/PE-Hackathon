@@ -268,11 +268,15 @@ curl http://127.0.0.1:80/cache/stats | python3 -m json.tool
 | Scenario | Status | Body |
 |---|---|---|
 | Product not found | `404` | `{"error": "not found"}` |
-| Missing required field on POST | `400` | Flask default HTML error (no custom handler) |
-| Database unreachable | `500` | Flask default HTML error |
+| Missing required field on POST | `400` | `{"error": "validation failed", "details": ["'name' is required", ...]}` |
+| Invalid field type/value on POST | `400` | `{"error": "validation failed", "details": ["'price' must be a number"]}` |
+| Invalid or missing JSON body | `400` | `{"error": "invalid or missing JSON body"}` |
+| Unknown route | `404` | `{"error": "not found", "message": "/path does not exist"}` |
+| Wrong HTTP method | `405` | `{"error": "method not allowed", "message": "DELETE is not allowed on /products"}` |
+| Database unreachable | `500` | `{"error": "internal server error", "message": "an unexpected error occurred"}` |
 | Redis unreachable | `200` | Cache fails silently; DB is queried instead |
 
-> Redis errors are intentionally swallowed — the app degrades gracefully to direct DB reads when Redis is unavailable.
+> All error responses return structured JSON — no HTML tracebacks are ever exposed to clients. Redis errors are intentionally swallowed — the app degrades gracefully to direct DB reads when Redis is unavailable.
 
 ---
 

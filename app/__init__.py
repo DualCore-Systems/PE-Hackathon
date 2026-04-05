@@ -25,7 +25,35 @@ def create_app():
 
     @app.route("/health")
     def health():
+        """Liveness check — always returns 200 if the process is running."""
         return jsonify(status="ok")
+
+    @app.route("/health/ready")
+    def readiness():
+        """Readiness check — verifies DB and Redis are reachable."""
+        checks = {}
+        healthy = True
+
+        # Check PostgreSQL
+        try:
+            from app.database import db
+            db.execute_sql("SELECT 1")
+            checks["database"] = "ok"
+        except Exception as e:
+            checks["database"] = f"error: {e}"
+            healthy = False
+
+        # Check Redis
+        try:
+            from app.cache import _client_or_raise
+            _client_or_raise().ping()
+            checks["cache"] = "ok"
+        except Exception as e:
+            checks["cache"] = f"error: {e}"
+            healthy = False
+
+        status_code = 200 if healthy else 503
+        return jsonify(status="ok" if healthy else "degraded", checks=checks), status_code
 
     # ── JSON error handlers ──────────────────────────────────────────────
     @app.errorhandler(400)
