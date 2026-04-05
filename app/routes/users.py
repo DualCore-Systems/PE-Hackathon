@@ -51,7 +51,24 @@ def get_user(user_id):
         user = User.get_by_id(user_id)
     except User.DoesNotExist:
         return jsonify({"error": "user not found"}), 404
-    return jsonify(user.to_dict())
+    include = request.args.get("include", "")
+    include_counts = "stats" in include or "counts" in include
+    return jsonify(user.to_dict(include_counts=include_counts))
+
+
+@users_bp.route("/users/<int:user_id>/stats", methods=["GET"])
+def get_user_stats(user_id):
+    try:
+        user = User.get_by_id(user_id)
+    except User.DoesNotExist:
+        return jsonify({"error": "user not found"}), 404
+    from app.models.url import Url
+    from app.models.event import Event
+    return jsonify({
+        "user_id": user_id,
+        "url_count": Url.select().where(Url.user == user).count(),
+        "event_count": Event.select().where(Event.user == user).count(),
+    })
 
 
 @users_bp.route("/users", methods=["POST"])

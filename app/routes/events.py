@@ -41,6 +41,44 @@ def get_event(event_id):
     return jsonify(event.to_dict())
 
 
+@events_bp.route("/events/<int:event_id>", methods=["PUT"])
+def update_event(event_id):
+    try:
+        event = Event.get_by_id(event_id)
+    except Event.DoesNotExist:
+        return jsonify({"error": "event not found"}), 404
+
+    data = request.get_json(silent=True)
+    if data is None:
+        return jsonify({"error": "invalid or missing JSON body"}), 400
+
+    if "event_type" in data:
+        event.event_type = str(data["event_type"]).strip()
+    if "details" in data:
+        details = data["details"]
+        if details is not None and not isinstance(details, str):
+            details = json.dumps(details)
+        event.details = details
+    if "url_id" in data:
+        try:
+            url = Url.get_by_id(int(data["url_id"]))
+            event.url = url
+        except (Url.DoesNotExist, TypeError, ValueError):
+            return jsonify({"error": "url not found"}), 404
+    if "user_id" in data:
+        if data["user_id"] is None:
+            event.user = None
+        else:
+            try:
+                user = User.get_by_id(int(data["user_id"]))
+                event.user = user
+            except (User.DoesNotExist, TypeError, ValueError):
+                return jsonify({"error": "user not found"}), 404
+
+    event.save()
+    return jsonify(event.to_dict())
+
+
 @events_bp.route("/events/<int:event_id>", methods=["DELETE"])
 def delete_event(event_id):
     try:
