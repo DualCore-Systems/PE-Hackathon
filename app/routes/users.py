@@ -92,7 +92,10 @@ def create_user():
     except IntegrityError:
         return jsonify({"error": "a user with this email or username already exists"}), 409
 
-    return jsonify(user.to_dict()), 201
+    resp = jsonify(user.to_dict())
+    resp.status_code = 201
+    resp.headers["Location"] = f"/users/{user.id}"
+    return resp
 
 
 @users_bp.route("/users/<int:user_id>", methods=["PUT", "PATCH"])

@@ -81,7 +81,10 @@ def create_url():
     except IntegrityError:
         return jsonify({"error": "short_code already exists"}), 409
 
-    return jsonify(url.to_dict()), 201
+    resp = jsonify(url.to_dict())
+    resp.status_code = 201
+    resp.headers["Location"] = f"/urls/{url.id}"
+    return resp
 
 
 @urls_bp.route("/urls/<int:url_id>", methods=["PUT", "PATCH"])

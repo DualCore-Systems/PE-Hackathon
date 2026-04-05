@@ -127,7 +127,10 @@ def create_event():
         details=details,
     )
 
-    return jsonify(event.to_dict()), 201
+    resp = jsonify(event.to_dict())
+    resp.status_code = 201
+    resp.headers["Location"] = f"/events/{event.id}"
+    return resp
 
 
 @events_bp.route("/events/bulk", methods=["POST"])
