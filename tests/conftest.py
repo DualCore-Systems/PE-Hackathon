@@ -7,10 +7,13 @@ from peewee import SqliteDatabase
 
 from app.database import db
 from app.models.product import Product
+from app.models.user import User
+from app.models.url import Url
+from app.models.event import Event
 
 
 TEST_DB = SqliteDatabase(":memory:")
-MODELS = [Product]
+MODELS = [Product, User, Url, Event]
 
 
 def _test_init_db(app):
@@ -81,3 +84,30 @@ def sample_products():
             )
         )
     return products
+
+
+@pytest.fixture()
+def sample_user():
+    return User.create(email="user@example.com", username="testuser")
+
+
+@pytest.fixture()
+def sample_url(sample_user):
+    return Url.create(
+        original_url="https://example.com",
+        short_code="abc123",
+        title="Example",
+        user=sample_user,
+        is_active=True,
+    )
+
+
+@pytest.fixture()
+def sample_event(sample_url, sample_user):
+    import json
+    return Event.create(
+        event_type="click",
+        url=sample_url,
+        user=sample_user,
+        details=json.dumps({"referrer": "https://google.com"}),
+    )

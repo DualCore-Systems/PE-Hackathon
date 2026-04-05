@@ -7,6 +7,9 @@ load_dotenv()
 
 from app.database import db, init_db
 from app.models.product import Product
+from app.models.user import User
+from app.models.url import Url
+from app.models.event import Event
 
 
 class _FakeApp:
@@ -22,7 +25,7 @@ class _FakeApp:
 init_db(_FakeApp())
 db.connect()
 
-db.create_tables([Product], safe=True)
+db.create_tables([Product, User, Url, Event], safe=True)
 print("Tables created.")
 
 # Idempotent: skip seeding if data already exists

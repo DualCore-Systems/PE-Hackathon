@@ -19,14 +19,6 @@ def create_app():
     init_cache()
 
     from app import models  # noqa: F401 - registers models with Peewee
-    from app.database import db
-    from app.models.product import Product
-    from app.models.user import User
-    from app.models.url import Url
-    from app.models.event import Event
-
-    with db:
-        db.create_tables([Product, User, Url, Event], safe=True)
 
     register_routes(app)
     setup_metrics(app)
