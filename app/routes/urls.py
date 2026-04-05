@@ -84,7 +84,7 @@ def create_url():
     return jsonify(url.to_dict()), 201
 
 
-@urls_bp.route("/urls/<int:url_id>", methods=["PUT"])
+@urls_bp.route("/urls/<int:url_id>", methods=["PUT", "PATCH"])
 def update_url(url_id):
     try:
         url = Url.get_by_id(url_id)

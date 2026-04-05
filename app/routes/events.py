@@ -41,7 +41,7 @@ def get_event(event_id):
     return jsonify(event.to_dict())
 
 
-@events_bp.route("/events/<int:event_id>", methods=["PUT"])
+@events_bp.route("/events/<int:event_id>", methods=["PUT", "PATCH"])
 def update_event(event_id):
     try:
         event = Event.get_by_id(event_id)

@@ -95,7 +95,7 @@ def create_user():
     return jsonify(user.to_dict()), 201
 
 
-@users_bp.route("/users/<int:user_id>", methods=["PUT"])
+@users_bp.route("/users/<int:user_id>", methods=["PUT", "PATCH"])
 def update_user(user_id):
     try:
         user = User.get_by_id(user_id)
